@@ -2,6 +2,10 @@
 
 A terminal-based animated noise visualization using the OpenSimplex algorithm. Renders smooth, organic patterns as ASCII art with optional RGB color gradients.
 
+Based on a fun idea from [Thorsten Ball's Register Spill newsletter](https://registerspill.thorstenball.com/p/joy-and-curiosity-46).
+
+![Demo](demo.gif)
+
 ## Requirements
 
 - Python 3.12+
