@@ -13,6 +13,8 @@ import os
 import signal
 import sys
 import time
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import cpu_count
 from opensimplex import OpenSimplex
 
 # Character sets for rendering
@@ -24,10 +26,51 @@ CHARSETS = {
     'box': ' ·│─┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬'
 }
 
+# Worker function for multiprocessing (must be at module level)
+def _render_frame_worker(args):
+    """Render a complete frame in a worker process."""
+    width, height, scale, seed, charset, time_val, color_start, color_end = args
+
+    # Each process creates its own OpenSimplex instance
+    noise = OpenSimplex(seed=seed)
+
+    if color_start is not None and color_end is not None:
+        # Colored version
+        lines = []
+        for y in range(height):
+            line_parts = []
+            y_scaled = y * scale
+            for x in range(width):
+                noise_value = noise.noise3(x * scale, y_scaled, time_val)
+                normalized = (noise_value + 1) * 0.5
+                idx = int(normalized * (len(charset) - 1))
+
+                r = int(color_start[0] + (color_end[0] - color_start[0]) * normalized)
+                g = int(color_start[1] + (color_end[1] - color_start[1]) * normalized)
+                b = int(color_start[2] + (color_end[2] - color_start[2]) * normalized)
+
+                line_parts.append(f'\033[38;2;{r};{g};{b}m{charset[idx]}')
+            lines.append(''.join(line_parts))
+        return '\n'.join(lines) + '\033[0m'
+    else:
+        # Monochrome version
+        lines = []
+        for y in range(height):
+            line_parts = []
+            y_scaled = y * scale
+            for x in range(width):
+                noise_value = noise.noise3(x * scale, y_scaled, time_val)
+                normalized = (noise_value + 1) * 0.5
+                idx = int(normalized * (len(charset) - 1))
+                line_parts.append(charset[idx])
+            lines.append(''.join(line_parts))
+        return '\n'.join(lines)
+
 class TerminalNoise:
-    def __init__(self, charset='simple', scale=0.1, seed=None, color_start=None, color_end=None):
+    def __init__(self, charset='simple', scale=0.1, seed=None, color_start=None, color_end=None, use_multiprocess=False):
         if seed is None:
             seed = int(time.time())
+        self.seed = seed
         self.noise = OpenSimplex(seed=seed)
         self.charset = CHARSETS.get(charset, CHARSETS['simple'])
         self.scale = scale
@@ -35,6 +78,7 @@ class TerminalNoise:
         self.running = True
         self.color_start = color_start
         self.color_end = color_end
+        self.use_multiprocess = use_multiprocess
 
         # Set up signal handler for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -115,8 +159,15 @@ class TerminalNoise:
                 lines.append(''.join(line_parts))
             return '\n'.join(lines)
 
-    def run(self, target_fps=120):
-        """Main animation loop."""
+    def run(self, target_fps=60):
+        """Main animation loop - chooses single or multiprocess based on settings."""
+        if self.use_multiprocess:
+            self.run_multiprocess(target_fps)
+        else:
+            self.run_single(target_fps)
+
+    def run_single(self, target_fps=60):
+        """Single-threaded animation loop."""
         frame_time = 1.0 / target_fps
         time_step = 0.05  # Amount to increment time each frame
 
@@ -144,6 +195,65 @@ class TerminalNoise:
                 sleep_time = frame_time - elapsed
                 if sleep_time > 0:
                     time.sleep(sleep_time)
+
+        finally:
+            # Show cursor and move to bottom
+            sys.stdout.write('\033[?25h')
+            sys.stdout.write('\n')
+            sys.stdout.flush()
+
+    def run_multiprocess(self, target_fps=60):
+        """Multiprocess animation loop with frame pipeline."""
+        frame_time = 1.0 / target_fps
+        time_step = 0.05
+        buffer_size = cpu_count()  # Pre-render this many frames ahead
+
+        width, height = self.get_terminal_size()
+
+        # Hide cursor
+        sys.stdout.write('\033[?25l')
+        sys.stdout.flush()
+
+        try:
+            with ProcessPoolExecutor(max_workers=cpu_count()) as executor:
+                # Pre-populate the pipeline with future frames
+                futures = []
+                for i in range(buffer_size):
+                    time_val = self.time + (i * time_step)
+                    args = (width, height, self.scale, self.seed, self.charset,
+                           time_val, self.color_start, self.color_end)
+                    future = executor.submit(_render_frame_worker, args)
+                    futures.append(future)
+
+                frame_index = 0
+                while self.running:
+                    loop_start = time.time()
+
+                    # Get the next completed frame
+                    frame = futures[0].result()
+                    futures.pop(0)
+
+                    # Display the frame
+                    sys.stdout.write('\033[H')
+                    sys.stdout.write(frame)
+                    sys.stdout.flush()
+
+                    # Submit a new frame to maintain the pipeline
+                    time_val = self.time + (buffer_size * time_step)
+                    args = (width, height, self.scale, self.seed, self.charset,
+                           time_val, self.color_start, self.color_end)
+                    future = executor.submit(_render_frame_worker, args)
+                    futures.append(future)
+
+                    # Increment time
+                    self.time += time_step
+                    frame_index += 1
+
+                    # Sleep to maintain target FPS
+                    elapsed = time.time() - loop_start
+                    sleep_time = frame_time - elapsed
+                    if sleep_time > 0:
+                        time.sleep(sleep_time)
 
         finally:
             # Show cursor and move to bottom
@@ -191,6 +301,11 @@ def main():
         action='store_true',
         help='Disable color gradient (monochrome mode)'
     )
+    parser.add_argument(
+        '--multiprocess',
+        action='store_true',
+        help='Enable multiprocess rendering for higher FPS (uses all CPU cores)'
+    )
 
     args = parser.parse_args()
 
@@ -209,7 +324,8 @@ def main():
         charset=args.charset,
         scale=args.scale,
         color_start=color_start,
-        color_end=color_end
+        color_end=color_end,
+        use_multiprocess=args.multiprocess
     )
     noise_gen.run()
 
