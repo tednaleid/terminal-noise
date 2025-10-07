@@ -1,6 +1,6 @@
 #!/usr/bin/env -S uv run --script
 # ABOUTME: Generates animated ASCII art using OpenSimplex noise algorithm.
-# ABOUTME: Renders to terminal with automatic window size detection and 60 FPS animation.
+# ABOUTME: Renders to terminal with automatic window size detection and 120 FPS animation.
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
@@ -176,14 +176,14 @@ class TerminalNoise:
                 lines.append(''.join(line_parts))
             return '\n'.join(lines)
 
-    def run(self, target_fps=60):
+    def run(self, target_fps=120):
         """Main animation loop - chooses single or multiprocess based on settings."""
         if self.use_multiprocess:
             self.run_multiprocess(target_fps)
         else:
             self.run_single(target_fps)
 
-    def run_single(self, target_fps=60):
+    def run_single(self, target_fps=120):
         """Single-threaded animation loop."""
         frame_time = 1.0 / target_fps
         time_step = 0.05  # Amount to increment time each frame
@@ -229,7 +229,7 @@ class TerminalNoise:
             sys.stdout.write('\n')
             sys.stdout.flush()
 
-    def run_multiprocess(self, target_fps=60):
+    def run_multiprocess(self, target_fps=120):
         """Multiprocess animation loop with frame pipeline."""
         frame_time = 1.0 / target_fps
         time_step = 0.05
