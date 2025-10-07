@@ -18,6 +18,7 @@ from opensimplex import OpenSimplex
 # Character sets for rendering
 CHARSETS = {
     'simple': ' .:-=+*#%@',
+    'growth': ' .\'`,;:!|liI+~<>icv)(xr7t1{?[fjz}nsu*LJ#$%&0@',
     'dense': ' .\':`^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
     'blocks': ' ░▒▓█'
 }
@@ -75,7 +76,7 @@ class TerminalNoise:
 
         return '\n'.join(lines)
 
-    def run(self, target_fps=60):
+    def run(self, target_fps=120):
         """Main animation loop."""
         frame_time = 1.0 / target_fps
         time_step = 0.05  # Amount to increment time each frame

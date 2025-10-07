@@ -19,6 +19,7 @@ The rendered result will be animated ASCII. As the noise changes, it will morph 
 
 - `--charset` or `-c`: Select character set for rendering
   - `simple`: ` .:-=+*#%@` (default)
+  - `growth`: `` .'`,;:!|liI+~<>icv)(xr7t1{?[fjz}nsu*LJ#$%&0@`` - characters that "grow" from small to dense, progressing from the same visual point
   - `dense`: `` .':`^",:;Il!i><~+_-?][}{1)(|\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$``
   - `blocks`: ` ░▒▓█`
 - `--scale` or `-s`: Noise scale factor (default: 0.1)
