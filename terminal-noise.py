@@ -29,41 +29,29 @@ CHARSETS = {
 # Worker function for multiprocessing (must be at module level)
 def _render_frame_worker(args):
     """Render a complete frame in a worker process."""
-    width, height, scale, seed, charset, time_val, color_start, color_end = args
+    width, height, scale, seed, colored_chars, time_val = args
 
     # Each process creates its own OpenSimplex instance
     noise = OpenSimplex(seed=seed)
 
-    if color_start is not None and color_end is not None:
-        # Colored version
-        lines = []
-        for y in range(height):
-            line_parts = []
-            y_scaled = y * scale
-            for x in range(width):
-                noise_value = noise.noise3(x * scale, y_scaled, time_val)
-                normalized = (noise_value + 1) * 0.5
-                idx = int(normalized * (len(charset) - 1))
+    # colored_chars is either a list of pre-colored strings or just plain charset
+    lines = []
+    charset_len = len(colored_chars)
 
-                r = int(color_start[0] + (color_end[0] - color_start[0]) * normalized)
-                g = int(color_start[1] + (color_end[1] - color_start[1]) * normalized)
-                b = int(color_start[2] + (color_end[2] - color_start[2]) * normalized)
+    for y in range(height):
+        line_parts = []
+        y_scaled = y * scale
+        for x in range(width):
+            noise_value = noise.noise3(x * scale, y_scaled, time_val)
+            normalized = (noise_value + 1) * 0.5
+            idx = int(normalized * (charset_len - 1))
+            line_parts.append(colored_chars[idx])
+        lines.append(''.join(line_parts))
 
-                line_parts.append(f'\033[38;2;{r};{g};{b}m{charset[idx]}')
-            lines.append(''.join(line_parts))
+    # Add color reset at end if using colors
+    if '\033[' in colored_chars[0]:
         return '\n'.join(lines) + '\033[0m'
     else:
-        # Monochrome version
-        lines = []
-        for y in range(height):
-            line_parts = []
-            y_scaled = y * scale
-            for x in range(width):
-                noise_value = noise.noise3(x * scale, y_scaled, time_val)
-                normalized = (noise_value + 1) * 0.5
-                idx = int(normalized * (len(charset) - 1))
-                line_parts.append(charset[idx])
-            lines.append(''.join(line_parts))
         return '\n'.join(lines)
 
 class TerminalNoise:
@@ -79,6 +67,21 @@ class TerminalNoise:
         self.color_end = color_end
         self.show_fps = show_fps
         self.frame_times = []  # Rolling window of recent frame times
+
+        # Pre-calculate colored characters for all charset indices
+        if color_start is not None and color_end is not None:
+            self.colored_chars = []
+            charset_len = len(self.charset)
+            for i in range(charset_len):
+                # Calculate normalized value for this character index
+                normalized = i / (charset_len - 1) if charset_len > 1 else 0
+                r = int(color_start[0] + (color_end[0] - color_start[0]) * normalized)
+                g = int(color_start[1] + (color_end[1] - color_start[1]) * normalized)
+                b = int(color_start[2] + (color_end[2] - color_start[2]) * normalized)
+                self.colored_chars.append(f'\033[38;2;{r};{g};{b}m{self.charset[i]}')
+        else:
+            # Monochrome - just use the charset as-is
+            self.colored_chars = list(self.charset)
 
         # Set up signal handler for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -111,16 +114,6 @@ class TerminalNoise:
         avg_duration = sum(self.frame_times) / len(self.frame_times)
         return 1.0 / avg_duration if avg_duration > 0 else 0.0
 
-    def interpolate_color(self, t):
-        """Interpolate between start and end colors based on parameter t (0 to 1)."""
-        if self.color_start is None or self.color_end is None:
-            return None
-
-        r = int(self.color_start[0] + (self.color_end[0] - self.color_start[0]) * t)
-        g = int(self.color_start[1] + (self.color_end[1] - self.color_start[1]) * t)
-        b = int(self.color_start[2] + (self.color_end[2] - self.color_start[2]) * t)
-        return (r, g, b)
-
     def run(self, target_fps=60):
         """Multiprocess animation loop with frame pipeline."""
         frame_time = 1.0 / target_fps
@@ -139,8 +132,7 @@ class TerminalNoise:
                 futures = []
                 for i in range(buffer_size):
                     time_val = self.time + (i * time_step)
-                    args = (width, height, self.scale, self.seed, self.charset,
-                           time_val, self.color_start, self.color_end)
+                    args = (width, height, self.scale, self.seed, self.colored_chars, time_val)
                     future = executor.submit(_render_frame_worker, args)
                     futures.append(future)
 
@@ -169,8 +161,7 @@ class TerminalNoise:
 
                     # Submit a new frame to maintain the pipeline
                     time_val = self.time + (buffer_size * time_step)
-                    args = (width, height, self.scale, self.seed, self.charset,
-                           time_val, self.color_start, self.color_end)
+                    args = (width, height, self.scale, self.seed, self.colored_chars, time_val)
                     future = executor.submit(_render_frame_worker, args)
                     futures.append(future)
 
