@@ -20,7 +20,8 @@ CHARSETS = {
     'simple': ' .:-=+*#%@',
     'growth': ' .\'`,;:!|liI+~<>icv)(xr7t1{?[fjz}nsu*LJ#$%&0@',
     'dense': ' .\':`^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
-    'blocks': ' ░▒▓█'
+    'blocks': ' ░▒▓█',
+    'box': ' ·│─┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬'
 }
 
 class TerminalNoise:

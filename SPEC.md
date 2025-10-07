@@ -22,6 +22,7 @@ The rendered result will be animated ASCII. As the noise changes, it will morph 
   - `growth`: `` .'`,;:!|liI+~<>icv)(xr7t1{?[fjz}nsu*LJ#$%&0@`` - characters that "grow" from small to dense, progressing from the same visual point
   - `dense`: `` .':`^",:;Il!i><~+_-?][}{1)(|\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$``
   - `blocks`: ` ░▒▓█`
+  - `box`: ` ·│─┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬` - uses box drawing characters (Unicode 179-218) for structured patterns
 - `--scale` or `-s`: Noise scale factor (default: 0.1)
   - smaller values = more detailed/busy
   - larger values = smoother/flowing
