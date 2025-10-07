@@ -26,11 +26,15 @@ The animation will fill your terminal window and run until you press Ctrl-C.
 
 ### Character Sets (`-c`, `--charset`)
 
-- `simple` - Basic gradient (default): ` .:-=+*#%@`
+- `horizontal` - Horizontal bars (default): ` ▏▎▍▌▋▊▉█`
+- `vertical` - Vertical bars: ` ▁▂▃▄▅▆▇█`
+- `simple` - Basic gradient: ` .:-=+*#%@`
 - `growth` - Characters that grow from small to dense
 - `dense` - High-detail character set with many gradations
 - `blocks` - Block characters: ` ░▒▓█`
+- `squares` - Square characters: ` ■▄▀▌▐█`
 - `box` - Box drawing characters for geometric patterns
+- `box2` - Minimal box drawing: ` ·─│┼`
 
 ### Noise Scale (`-s`, `--scale`)
 
@@ -41,14 +45,14 @@ Controls the detail level of the noise. Default is `0.1`.
 
 ### Color Options
 
-- `--color-start` - Starting color in hex format (default: `#00CED1`)
-- `--color-end` - Ending color in hex format (default: `#FF8C00`)
+- `--color-start` - Starting color in hex format (default: `#FF1111` - red)
+- `--color-end` - Ending color in hex format (default: `#11FFFF` - cyan)
 - `--no-color` - Disable colors for monochrome output
 
 ### Performance Options
 
 - `--show-fps` - Display current FPS on the last line of output (rolling 30-frame average)
-- `--max-fps` - Target maximum FPS (default: 60)
+- `--max-fps` - Target maximum FPS (default: 120)
 
 ## Example Commands
 
