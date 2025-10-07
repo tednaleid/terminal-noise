@@ -67,18 +67,16 @@ def _render_frame_worker(args):
         return '\n'.join(lines)
 
 class TerminalNoise:
-    def __init__(self, charset='simple', scale=0.1, seed=None, color_start=None, color_end=None, use_multiprocess=False, show_fps=False):
+    def __init__(self, charset='simple', scale=0.1, seed=None, color_start=None, color_end=None, show_fps=False):
         if seed is None:
             seed = int(time.time())
         self.seed = seed
-        self.noise = OpenSimplex(seed=seed)
         self.charset = CHARSETS.get(charset, CHARSETS['simple'])
         self.scale = scale
         self.time = 0.0
         self.running = True
         self.color_start = color_start
         self.color_end = color_end
-        self.use_multiprocess = use_multiprocess
         self.show_fps = show_fps
         self.frame_times = []  # Rolling window of recent frame times
 
@@ -123,113 +121,7 @@ class TerminalNoise:
         b = int(self.color_start[2] + (self.color_end[2] - self.color_start[2]) * t)
         return (r, g, b)
 
-    def noise_to_char(self, noise_value):
-        """Convert noise value (-1 to 1) to a character from the charset, with optional color."""
-        # Normalize from [-1, 1] to [0, 1]
-        normalized = (noise_value + 1) / 2
-        # Map to character index
-        idx = int(normalized * (len(self.charset) - 1))
-        char = self.charset[idx]
-
-        # Apply color if enabled
-        if self.color_start is not None and self.color_end is not None:
-            rgb = self.interpolate_color(normalized)
-            # ANSI 24-bit true color: \033[38;2;R;G;Bm
-            return f'\033[38;2;{rgb[0]};{rgb[1]};{rgb[2]}m{char}'
-
-        return char
-
-    def render_frame(self):
-        """Generate and render a single frame of noise."""
-        width, height = self.get_terminal_size()
-
-        if self.color_start is not None and self.color_end is not None:
-            # Colored version with optimized string building
-            lines = []
-            for y in range(height):
-                line_parts = []
-                y_scaled = y * self.scale
-                for x in range(width):
-                    noise_value = self.noise.noise3(x * self.scale, y_scaled, self.time)
-                    normalized = (noise_value + 1) * 0.5  # Slightly faster than / 2
-                    idx = int(normalized * (len(self.charset) - 1))
-
-                    # Inline color calculation
-                    r = int(self.color_start[0] + (self.color_end[0] - self.color_start[0]) * normalized)
-                    g = int(self.color_start[1] + (self.color_end[1] - self.color_start[1]) * normalized)
-                    b = int(self.color_start[2] + (self.color_end[2] - self.color_start[2]) * normalized)
-
-                    line_parts.append(f'\033[38;2;{r};{g};{b}m{self.charset[idx]}')
-                lines.append(''.join(line_parts))
-            return '\n'.join(lines) + '\033[0m'
-        else:
-            # Monochrome version - much simpler
-            lines = []
-            for y in range(height):
-                line_parts = []
-                y_scaled = y * self.scale
-                for x in range(width):
-                    noise_value = self.noise.noise3(x * self.scale, y_scaled, self.time)
-                    normalized = (noise_value + 1) * 0.5
-                    idx = int(normalized * (len(self.charset) - 1))
-                    line_parts.append(self.charset[idx])
-                lines.append(''.join(line_parts))
-            return '\n'.join(lines)
-
-    def run(self, target_fps=120):
-        """Main animation loop - chooses single or multiprocess based on settings."""
-        if self.use_multiprocess:
-            self.run_multiprocess(target_fps)
-        else:
-            self.run_single(target_fps)
-
-    def run_single(self, target_fps=120):
-        """Single-threaded animation loop."""
-        frame_time = 1.0 / target_fps
-        time_step = 0.05  # Amount to increment time each frame
-
-        # Hide cursor
-        sys.stdout.write('\033[?25l')
-        sys.stdout.flush()
-
-        try:
-            last_frame_time = time.time()
-            while self.running:
-                loop_start = time.time()
-
-                # Move cursor to home position
-                sys.stdout.write('\033[H')
-
-                # Render and output frame
-                frame = self.render_frame()
-                sys.stdout.write(frame)
-
-                # Display FPS if enabled (measure actual frame-to-frame time)
-                if self.show_fps:
-                    current_time = time.time()
-                    frame_duration = current_time - last_frame_time
-                    fps = self.calculate_fps(frame_duration)
-                    sys.stdout.write(f'\n{fps:.2f}')
-                    last_frame_time = current_time
-
-                sys.stdout.flush()
-
-                # Increment time for next frame
-                self.time += time_step
-
-                # Sleep to maintain target FPS
-                elapsed = time.time() - loop_start
-                sleep_time = frame_time - elapsed
-                if sleep_time > 0:
-                    time.sleep(sleep_time)
-
-        finally:
-            # Show cursor and move to bottom
-            sys.stdout.write('\033[?25h')
-            sys.stdout.write('\n')
-            sys.stdout.flush()
-
-    def run_multiprocess(self, target_fps=120):
+    def run(self, target_fps=60):
         """Multiprocess animation loop with frame pipeline."""
         frame_time = 1.0 / target_fps
         time_step = 0.05
@@ -339,11 +231,6 @@ def main():
         help='Disable color gradient (monochrome mode)'
     )
     parser.add_argument(
-        '--multiprocess',
-        action='store_true',
-        help='Enable multiprocess rendering for higher FPS (uses all CPU cores)'
-    )
-    parser.add_argument(
         '--show-fps',
         action='store_true',
         help='Display current FPS on the last line of output'
@@ -373,7 +260,6 @@ def main():
         scale=args.scale,
         color_start=color_start,
         color_end=color_end,
-        use_multiprocess=args.multiprocess,
         show_fps=args.show_fps
     )
     noise_gen.run(target_fps=args.max_fps)
