@@ -25,7 +25,9 @@ CHARSETS = {
     'blocks': ' ░▒▓█',
     'box': ' ·│─┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬',
     'box2': ' ·─│┼',
-    'squares': ' ■▄▀▌▐█'
+    'squares': ' ■▄▀▌▐█',
+    'vertical': ' ▁▂▃▄▅▆▇█',
+    'horizontal': ' ▏▎▍▌▋▊▉█'
 }
 
 # Worker function for multiprocessing (must be at module level)
@@ -44,7 +46,7 @@ def _render_frame_worker(args):
         line_parts = []
         y_scaled = y * scale
         for x in range(width):
-            noise_value = noise.noise3(x * scale, y_scaled, time_val)
+            noise_value = noise.noise3(x * scale, y_scaled, time_val / 20)
             normalized = (noise_value + 1) * 0.5
             idx = int(normalized * (charset_len - 1))
             line_parts.append(colored_chars[idx])
