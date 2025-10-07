@@ -82,25 +82,38 @@ class TerminalNoise:
         """Generate and render a single frame of noise."""
         width, height = self.get_terminal_size()
 
-        lines = []
-        for y in range(height):
-            line = []
-            for x in range(width):
-                # Sample 3D noise (x, y, time)
-                noise_value = self.noise.noise3(
-                    x * self.scale,
-                    y * self.scale,
-                    self.time
-                )
-                line.append(self.noise_to_char(noise_value))
-            lines.append(''.join(line))
-
-        # Reset color at end of frame if using colors
-        frame = '\n'.join(lines)
         if self.color_start is not None and self.color_end is not None:
-            frame += '\033[0m'  # Reset all attributes
+            # Colored version with optimized string building
+            lines = []
+            for y in range(height):
+                line_parts = []
+                y_scaled = y * self.scale
+                for x in range(width):
+                    noise_value = self.noise.noise3(x * self.scale, y_scaled, self.time)
+                    normalized = (noise_value + 1) * 0.5  # Slightly faster than / 2
+                    idx = int(normalized * (len(self.charset) - 1))
 
-        return frame
+                    # Inline color calculation
+                    r = int(self.color_start[0] + (self.color_end[0] - self.color_start[0]) * normalized)
+                    g = int(self.color_start[1] + (self.color_end[1] - self.color_start[1]) * normalized)
+                    b = int(self.color_start[2] + (self.color_end[2] - self.color_start[2]) * normalized)
+
+                    line_parts.append(f'\033[38;2;{r};{g};{b}m{self.charset[idx]}')
+                lines.append(''.join(line_parts))
+            return '\n'.join(lines) + '\033[0m'
+        else:
+            # Monochrome version - much simpler
+            lines = []
+            for y in range(height):
+                line_parts = []
+                y_scaled = y * self.scale
+                for x in range(width):
+                    noise_value = self.noise.noise3(x * self.scale, y_scaled, self.time)
+                    normalized = (noise_value + 1) * 0.5
+                    idx = int(normalized * (len(self.charset) - 1))
+                    line_parts.append(self.charset[idx])
+                lines.append(''.join(line_parts))
+            return '\n'.join(lines)
 
     def run(self, target_fps=120):
         """Main animation loop."""

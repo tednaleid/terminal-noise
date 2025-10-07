@@ -121,3 +121,12 @@ The script uses a 3D OpenSimplex noise field with dimensions (x, y, time). Each 
 4. Renders using ANSI escape codes for efficient redrawing
 
 The time dimension increments each frame, creating smooth morphing animations.
+
+## Performance
+
+The animation runs at approximately 25-30 FPS on an 80x24 terminal, which provides smooth organic motion. Performance scales with terminal size - smaller terminals or larger scale values will render faster. The primary bottleneck is noise generation (each frame requires ~1,920 noise calculations for a standard terminal).
+
+Tips for better performance:
+- Use larger `--scale` values (e.g., `0.2` or `0.3`) for fewer calculations per visible change
+- Use `--no-color` for monochrome mode (slightly faster)
+- Smaller terminal windows render faster

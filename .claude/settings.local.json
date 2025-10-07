@@ -4,7 +4,8 @@
       "Bash(./terminal-noise.py:*)",
       "Bash(timeout:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(./benchmark.py)"
     ],
     "deny": [],
     "ask": []
