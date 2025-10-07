@@ -67,7 +67,7 @@ def _render_frame_worker(args):
         return '\n'.join(lines)
 
 class TerminalNoise:
-    def __init__(self, charset='simple', scale=0.1, seed=None, color_start=None, color_end=None, use_multiprocess=False):
+    def __init__(self, charset='simple', scale=0.1, seed=None, color_start=None, color_end=None, use_multiprocess=False, show_fps=False):
         if seed is None:
             seed = int(time.time())
         self.seed = seed
@@ -79,6 +79,8 @@ class TerminalNoise:
         self.color_start = color_start
         self.color_end = color_end
         self.use_multiprocess = use_multiprocess
+        self.show_fps = show_fps
+        self.frame_times = []  # Rolling window of recent frame times
 
         # Set up signal handler for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -91,10 +93,25 @@ class TerminalNoise:
         """Get current terminal dimensions."""
         try:
             size = os.get_terminal_size()
-            return size.columns, size.lines - 1  # Reserve one line to avoid scrolling
+            # Reserve two lines: one for FPS display, one to avoid scrolling
+            reserve = 2 if self.show_fps else 1
+            return size.columns, size.lines - reserve
         except OSError:
             # Fallback for when output is piped or redirected
             return 80, 24
+
+    def calculate_fps(self, frame_duration):
+        """Calculate current FPS based on recent frame times."""
+        self.frame_times.append(frame_duration)
+        # Keep only last 30 frames for rolling average
+        if len(self.frame_times) > 30:
+            self.frame_times.pop(0)
+
+        if not self.frame_times:
+            return 0.0
+
+        avg_duration = sum(self.frame_times) / len(self.frame_times)
+        return 1.0 / avg_duration if avg_duration > 0 else 0.0
 
     def interpolate_color(self, t):
         """Interpolate between start and end colors based on parameter t (0 to 1)."""
@@ -176,6 +193,7 @@ class TerminalNoise:
         sys.stdout.flush()
 
         try:
+            last_frame_time = time.time()
             while self.running:
                 loop_start = time.time()
 
@@ -185,6 +203,15 @@ class TerminalNoise:
                 # Render and output frame
                 frame = self.render_frame()
                 sys.stdout.write(frame)
+
+                # Display FPS if enabled (measure actual frame-to-frame time)
+                if self.show_fps:
+                    current_time = time.time()
+                    frame_duration = current_time - last_frame_time
+                    fps = self.calculate_fps(frame_duration)
+                    sys.stdout.write(f'\n{fps:.2f}')
+                    last_frame_time = current_time
+
                 sys.stdout.flush()
 
                 # Increment time for next frame
@@ -226,6 +253,7 @@ class TerminalNoise:
                     futures.append(future)
 
                 frame_index = 0
+                last_frame_time = time.time()
                 while self.running:
                     loop_start = time.time()
 
@@ -236,6 +264,15 @@ class TerminalNoise:
                     # Display the frame
                     sys.stdout.write('\033[H')
                     sys.stdout.write(frame)
+
+                    # Display FPS if enabled (measure actual frame-to-frame time)
+                    if self.show_fps:
+                        current_time = time.time()
+                        frame_duration = current_time - last_frame_time
+                        fps = self.calculate_fps(frame_duration)
+                        sys.stdout.write(f'\n{fps:.2f}')
+                        last_frame_time = current_time
+
                     sys.stdout.flush()
 
                     # Submit a new frame to maintain the pipeline
@@ -306,6 +343,11 @@ def main():
         action='store_true',
         help='Enable multiprocess rendering for higher FPS (uses all CPU cores)'
     )
+    parser.add_argument(
+        '--show-fps',
+        action='store_true',
+        help='Display current FPS on the last line of output'
+    )
 
     args = parser.parse_args()
 
@@ -325,7 +367,8 @@ def main():
         scale=args.scale,
         color_start=color_start,
         color_end=color_end,
-        use_multiprocess=args.multiprocess
+        use_multiprocess=args.multiprocess,
+        show_fps=args.show_fps
     )
     noise_gen.run()
 
