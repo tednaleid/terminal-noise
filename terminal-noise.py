@@ -23,7 +23,9 @@ CHARSETS = {
     'growth': ' .\'`,;:!|liI+~<>icv)(xr7t1{?[fjz}nsu*LJ#$%&0@',
     'dense': ' .\':`^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
     'blocks': ' ░▒▓█',
-    'box': ' ·│─┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬'
+    'box': ' ·│─┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬',
+    'box2': ' ·─│┼',
+    'squares': ' ■▄▀▌▐█'
 }
 
 # Worker function for multiprocessing (must be at module level)
