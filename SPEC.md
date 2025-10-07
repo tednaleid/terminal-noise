@@ -4,20 +4,30 @@ Uses the OpenSimplex noise algorithm to generate noise that we render as ASCII t
 
 The rendered result will be animated ASCII. As the noise changes, it will morph from one representation to the next.
 
-## Requirments
+## Requirements
 
-- run as a python command line app that leverages `uv` to launch as a standalone script via a `uv` shebang.
+- run as a python command line app that leverages `uv` to launch as a standalone script via a `uv` shebang
 - Possible python library for OpenSimplex noise: https://pypi.org/project/opensimplex/
 - runs at least at 60 FPS
 - should run until ctrl-c/sigint is sent
+- automatically detect and fill the current terminal window size
+- use 3D noise field (x, y, time) where time increments each frame for animation
+- use ANSI escape codes (cursor positioning) for clearing/redrawing so output can be piped to file and replayed
+- monochrome ASCII for v1 (ANSI color codes planned for v2)
+
+## Command Line Arguments
+
+- `--charset` or `-c`: Select character set for rendering
+  - `simple`: ` .:-=+*#%@` (default)
+  - `dense`: `` .':`^",:;Il!i><~+_-?][}{1)(|\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$``
+  - `blocks`: ` ░▒▓█`
+- `--scale` or `-s`: Noise scale factor (default: 0.1)
+  - smaller values = more detailed/busy
+  - larger values = smoother/flowing
 
 ## Stretch Goals
-- Allow the user some control over the character set used to render
-- Allow the user to pick different gradients to change the appearance
-
+- Allow the user to pick different gradients/colors (ANSI color codes for v2)
 
 ## Working Requirements
 - automatically commit after major changes
-
-## Questions
-- can/should we allow piping to a file so that it can be examined/replayed? Depending on how the screen is redrawn this might not work well (or might be great)
+- keep SPEC.md updated with decisions and requirements
