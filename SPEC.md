@@ -8,12 +8,13 @@ The rendered result will be animated ASCII. As the noise changes, it will morph 
 
 - run as a python command line app that leverages `uv` to launch as a standalone script via a `uv` shebang
 - Possible python library for OpenSimplex noise: https://pypi.org/project/opensimplex/
-- runs at least at 60 FPS
+- runs at 50-70 FPS using multiprocessing (all CPU cores)
 - should run until ctrl-c/sigint is sent
 - automatically detect and fill the current terminal window size
 - use 3D noise field (x, y, time) where time increments each frame for animation
 - use ANSI escape codes (cursor positioning) for clearing/redrawing so output can be piped to file and replayed
 - supports RGB color gradients using ANSI 24-bit true color codes
+- uses ProcessPoolExecutor with frame pipeline for parallel rendering
 
 ## Command Line Arguments
 
@@ -29,6 +30,8 @@ The rendered result will be animated ASCII. As the noise changes, it will morph 
 - `--color-start`: Starting color for gradient in hex format (default: #00CED1 - dark cyan)
 - `--color-end`: Ending color for gradient in hex format (default: #FF8C00 - dark orange)
 - `--no-color`: Disable color gradient (monochrome mode)
+- `--show-fps`: Display current FPS on the last line of output (rolling 30-frame average)
+- `--max-fps`: Target maximum FPS (default: 60)
 
 ## Working Requirements
 - automatically commit after major changes

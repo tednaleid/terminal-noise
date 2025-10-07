@@ -47,7 +47,8 @@ Controls the detail level of the noise. Default is `0.1`.
 
 ### Performance Options
 
-- `--multiprocess` - Enable multiprocess rendering using all CPU cores for 60+ FPS (default: single-threaded at ~25-30 FPS)
+- `--show-fps` - Display current FPS on the last line of output (rolling 30-frame average)
+- `--max-fps` - Target maximum FPS (default: 60)
 
 ## Example Commands
 
@@ -103,9 +104,14 @@ Matrix theme (black to green with dense characters):
 ./terminal-noise.py -c dense --color-start '#000000' --color-end '#00FF00' -s 0.08
 ```
 
-High-performance mode (60+ FPS on multi-core systems):
+Show FPS while running:
 ```bash
-./terminal-noise.py --multiprocess
+./terminal-noise.py --show-fps
+```
+
+Custom FPS target (120 FPS):
+```bash
+./terminal-noise.py --max-fps 120
 ```
 
 ## Recording Output
@@ -124,35 +130,31 @@ cat output.ans
 
 The script uses a 3D OpenSimplex noise field with dimensions (x, y, time). Each frame:
 
-1. Samples the noise at each terminal position
-2. Maps noise values (-1 to 1) to character indices
-3. Optionally applies color interpolation based on noise value
-4. Renders using ANSI escape codes for efficient redrawing
+1. Multiple worker processes render frames in parallel using a frame pipeline
+2. Each worker samples the noise at each terminal position for its assigned time value
+3. Maps noise values (-1 to 1) to character indices
+4. Optionally applies color interpolation based on noise value
+5. Renders using ANSI escape codes for efficient redrawing
 
 The time dimension increments each frame, creating smooth morphing animations.
 
 ## Performance
 
-### Single-threaded Mode (default)
+The application uses multiprocessing by default to achieve high frame rates:
 
-The animation runs at approximately 25-30 FPS on an 80x24 terminal, which provides smooth organic motion. Performance scales with terminal size - smaller terminals or larger scale values will render faster. The primary bottleneck is noise generation (each frame requires ~1,920 noise calculations for a standard terminal).
-
-Tips for better performance in single-threaded mode:
-- Use larger `--scale` values (e.g., `0.2` or `0.3`) for fewer calculations per visible change
-- Use `--no-color` for monochrome mode (slightly faster)
-- Smaller terminal windows render faster
-
-### Multiprocess Mode (`--multiprocess`)
-
-For high-performance rendering, use the `--multiprocess` flag to utilize all CPU cores. This mode:
-- Achieves 60-70+ FPS on multi-core systems (2-3x speedup on typical 4-core machines)
-- Uses a frame pipeline where each worker process renders complete frames at different time values
+- **50-70+ FPS** on multi-core systems (typical 4-core machines)
+- **ProcessPoolExecutor** with frame pipeline for parallel rendering
+- Each worker process renders complete frames at different time values
+- **Buffer size = CPU count** - pre-renders frames ahead to maintain smooth playback
 - Leverages OpenSimplex's idempotent nature (same seed + coordinates always produces identical output)
-- Pre-renders frames ahead to maintain smooth playback
 
-Example:
-```bash
-./terminal-noise.py --multiprocess
-```
+Performance scales with:
+- **CPU core count** - more cores = higher FPS (with diminishing returns due to process coordination)
+- **Terminal size** - smaller terminals render faster
+- **Scale values** - larger `--scale` values require fewer noise calculations
 
-The speedup scales with CPU core count, though with diminishing returns due to process coordination overhead.
+Tips:
+- Use `--show-fps` to monitor actual frame rate
+- Use `--max-fps` to cap frame rate (default: 60)
+- Use `--no-color` for monochrome mode (slightly faster)
+- Larger `--scale` values (e.g., `0.2` or `0.3`) reduce calculations per frame
