@@ -348,6 +348,12 @@ def main():
         action='store_true',
         help='Display current FPS on the last line of output'
     )
+    parser.add_argument(
+        '--max-fps',
+        type=int,
+        default=60,
+        help='Target maximum FPS (default: 60)'
+    )
 
     args = parser.parse_args()
 
@@ -370,7 +376,7 @@ def main():
         use_multiprocess=args.multiprocess,
         show_fps=args.show_fps
     )
-    noise_gen.run()
+    noise_gen.run(target_fps=args.max_fps)
 
 if __name__ == '__main__':
     main()
