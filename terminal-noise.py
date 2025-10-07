@@ -25,7 +25,7 @@ CHARSETS = {
 }
 
 class TerminalNoise:
-    def __init__(self, charset='simple', scale=0.1, seed=None):
+    def __init__(self, charset='simple', scale=0.1, seed=None, color_start=None, color_end=None):
         if seed is None:
             seed = int(time.time())
         self.noise = OpenSimplex(seed=seed)
@@ -33,6 +33,8 @@ class TerminalNoise:
         self.scale = scale
         self.time = 0.0
         self.running = True
+        self.color_start = color_start
+        self.color_end = color_end
 
         # Set up signal handler for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -50,13 +52,31 @@ class TerminalNoise:
             # Fallback for when output is piped or redirected
             return 80, 24
 
+    def interpolate_color(self, t):
+        """Interpolate between start and end colors based on parameter t (0 to 1)."""
+        if self.color_start is None or self.color_end is None:
+            return None
+
+        r = int(self.color_start[0] + (self.color_end[0] - self.color_start[0]) * t)
+        g = int(self.color_start[1] + (self.color_end[1] - self.color_start[1]) * t)
+        b = int(self.color_start[2] + (self.color_end[2] - self.color_start[2]) * t)
+        return (r, g, b)
+
     def noise_to_char(self, noise_value):
-        """Convert noise value (-1 to 1) to a character from the charset."""
+        """Convert noise value (-1 to 1) to a character from the charset, with optional color."""
         # Normalize from [-1, 1] to [0, 1]
         normalized = (noise_value + 1) / 2
         # Map to character index
         idx = int(normalized * (len(self.charset) - 1))
-        return self.charset[idx]
+        char = self.charset[idx]
+
+        # Apply color if enabled
+        if self.color_start is not None and self.color_end is not None:
+            rgb = self.interpolate_color(normalized)
+            # ANSI 24-bit true color: \033[38;2;R;G;Bm
+            return f'\033[38;2;{rgb[0]};{rgb[1]};{rgb[2]}m{char}'
+
+        return char
 
     def render_frame(self):
         """Generate and render a single frame of noise."""
@@ -75,7 +95,12 @@ class TerminalNoise:
                 line.append(self.noise_to_char(noise_value))
             lines.append(''.join(line))
 
-        return '\n'.join(lines)
+        # Reset color at end of frame if using colors
+        frame = '\n'.join(lines)
+        if self.color_start is not None and self.color_end is not None:
+            frame += '\033[0m'  # Reset all attributes
+
+        return frame
 
     def run(self, target_fps=120):
         """Main animation loop."""
@@ -113,6 +138,13 @@ class TerminalNoise:
             sys.stdout.write('\n')
             sys.stdout.flush()
 
+def parse_hex_color(hex_str):
+    """Convert hex color string (e.g., '#FF5733' or 'FF5733') to RGB tuple."""
+    hex_str = hex_str.lstrip('#')
+    if len(hex_str) != 6:
+        raise ValueError(f'Invalid hex color: {hex_str}. Must be 6 hex digits.')
+    return tuple(int(hex_str[i:i+2], 16) for i in (0, 2, 4))
+
 def main():
     parser = argparse.ArgumentParser(
         description='Generate animated ASCII art using OpenSimplex noise.'
@@ -129,10 +161,43 @@ def main():
         default=0.1,
         help='Noise scale factor - smaller is more detailed, larger is smoother (default: 0.1)'
     )
+    parser.add_argument(
+        '--color-start',
+        type=str,
+        default='#00CED1',
+        help='Starting color for gradient in hex format (default: #00CED1 - dark cyan)'
+    )
+    parser.add_argument(
+        '--color-end',
+        type=str,
+        default='#FF8C00',
+        help='Ending color for gradient in hex format (default: #FF8C00 - dark orange)'
+    )
+    parser.add_argument(
+        '--no-color',
+        action='store_true',
+        help='Disable color gradient (monochrome mode)'
+    )
 
     args = parser.parse_args()
 
-    noise_gen = TerminalNoise(charset=args.charset, scale=args.scale)
+    # Parse colors if not in monochrome mode
+    color_start = None
+    color_end = None
+    if not args.no_color:
+        try:
+            color_start = parse_hex_color(args.color_start)
+            color_end = parse_hex_color(args.color_end)
+        except ValueError as e:
+            print(f'Error: {e}', file=sys.stderr)
+            sys.exit(1)
+
+    noise_gen = TerminalNoise(
+        charset=args.charset,
+        scale=args.scale,
+        color_start=color_start,
+        color_end=color_end
+    )
     noise_gen.run()
 
 if __name__ == '__main__':

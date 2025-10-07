@@ -13,7 +13,7 @@ The rendered result will be animated ASCII. As the noise changes, it will morph 
 - automatically detect and fill the current terminal window size
 - use 3D noise field (x, y, time) where time increments each frame for animation
 - use ANSI escape codes (cursor positioning) for clearing/redrawing so output can be piped to file and replayed
-- monochrome ASCII for v1 (ANSI color codes planned for v2)
+- supports RGB color gradients using ANSI 24-bit true color codes
 
 ## Command Line Arguments
 
@@ -26,9 +26,9 @@ The rendered result will be animated ASCII. As the noise changes, it will morph 
 - `--scale` or `-s`: Noise scale factor (default: 0.1)
   - smaller values = more detailed/busy
   - larger values = smoother/flowing
-
-## Stretch Goals
-- Allow the user to pick different gradients/colors (ANSI color codes for v2)
+- `--color-start`: Starting color for gradient in hex format (default: #00CED1 - dark cyan)
+- `--color-end`: Ending color for gradient in hex format (default: #FF8C00 - dark orange)
+- `--no-color`: Disable color gradient (monochrome mode)
 
 ## Working Requirements
 - automatically commit after major changes
