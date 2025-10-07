@@ -201,8 +201,8 @@ def main():
     parser.add_argument(
         '-c', '--charset',
         choices=list(CHARSETS.keys()),
-        default='simple',
-        help='Character set to use for rendering (default: simple)'
+        default='horizontal',
+        help='Character set to use for rendering (default: horizontal)'
     )
     parser.add_argument(
         '-s', '--scale',
@@ -213,14 +213,14 @@ def main():
     parser.add_argument(
         '--color-start',
         type=str,
-        default='#00CED1',
-        help='Starting color for gradient in hex format (default: #00CED1 - dark cyan)'
+        default='#FF1111',
+        help='Starting color for gradient in hex format (default: #FF1111 - red)'
     )
     parser.add_argument(
         '--color-end',
         type=str,
-        default='#FF8C00',
-        help='Ending color for gradient in hex format (default: #FF8C00 - dark orange)'
+        default='#11FFFF',
+        help='Ending color for gradient in hex format (default: #11FFFF - cyan)'
     )
     parser.add_argument(
         '--no-color',
@@ -235,8 +235,8 @@ def main():
     parser.add_argument(
         '--max-fps',
         type=int,
-        default=60,
-        help='Target maximum FPS (default: 60)'
+        default=120,
+        help='Target maximum FPS (default: 120)'
     )
 
     args = parser.parse_args()
