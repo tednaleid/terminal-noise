@@ -130,56 +130,58 @@ class TerminalNoise:
         sys.stdout.write('\033[?25l')
         sys.stdout.flush()
 
+        executor = ProcessPoolExecutor(max_workers=cpu_count())
         try:
-            with ProcessPoolExecutor(max_workers=cpu_count()) as executor:
-                # Pre-populate the pipeline with future frames
-                futures = []
-                for i in range(buffer_size):
-                    time_val = self.time + (i * time_step)
-                    args = (width, height, self.scale, self.seed, self.colored_chars, time_val)
-                    future = executor.submit(_render_frame_worker, args)
-                    futures.append(future)
+            # Pre-populate the pipeline with future frames
+            futures = []
+            for i in range(buffer_size):
+                time_val = self.time + (i * time_step)
+                args = (width, height, self.scale, self.seed, self.colored_chars, time_val)
+                future = executor.submit(_render_frame_worker, args)
+                futures.append(future)
 
-                frame_index = 0
-                last_frame_time = time.time()
-                while self.running:
-                    loop_start = time.time()
+            frame_index = 0
+            last_frame_time = time.time()
+            while self.running:
+                loop_start = time.time()
 
-                    # Get the next completed frame
-                    frame = futures[0].result()
-                    futures.pop(0)
+                # Get the next completed frame
+                frame = futures[0].result()
+                futures.pop(0)
 
-                    # Display the frame
-                    sys.stdout.write('\033[H')
-                    sys.stdout.write(frame)
+                # Display the frame
+                sys.stdout.write('\033[H')
+                sys.stdout.write(frame)
 
-                    # Display FPS if enabled (measure actual frame-to-frame time)
-                    if self.show_fps:
-                        current_time = time.time()
-                        frame_duration = current_time - last_frame_time
-                        fps = self.calculate_fps(frame_duration)
-                        sys.stdout.write(f'\n{fps:.2f}')
-                        last_frame_time = current_time
+                # Display FPS if enabled (measure actual frame-to-frame time)
+                if self.show_fps:
+                    current_time = time.time()
+                    frame_duration = current_time - last_frame_time
+                    fps = self.calculate_fps(frame_duration)
+                    sys.stdout.write(f'\n{fps:.2f}')
+                    last_frame_time = current_time
 
-                    sys.stdout.flush()
+                sys.stdout.flush()
 
-                    # Submit a new frame to maintain the pipeline
-                    time_val = self.time + (buffer_size * time_step)
-                    args = (width, height, self.scale, self.seed, self.colored_chars, time_val)
-                    future = executor.submit(_render_frame_worker, args)
-                    futures.append(future)
+                # Submit a new frame to maintain the pipeline
+                time_val = self.time + (buffer_size * time_step)
+                args = (width, height, self.scale, self.seed, self.colored_chars, time_val)
+                future = executor.submit(_render_frame_worker, args)
+                futures.append(future)
 
-                    # Increment time
-                    self.time += time_step
-                    frame_index += 1
+                # Increment time
+                self.time += time_step
+                frame_index += 1
 
-                    # Sleep to maintain target FPS
-                    elapsed = time.time() - loop_start
-                    sleep_time = frame_time - elapsed
-                    if sleep_time > 0:
-                        time.sleep(sleep_time)
+                # Sleep to maintain target FPS
+                elapsed = time.time() - loop_start
+                sleep_time = frame_time - elapsed
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
 
         finally:
+            # Shut down executor without waiting for pending tasks
+            executor.shutdown(wait=False, cancel_futures=True)
             # Show cursor and move to bottom
             sys.stdout.write('\033[?25h')
             sys.stdout.write('\n')
