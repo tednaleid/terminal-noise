@@ -332,6 +332,10 @@ def main():
                 print(f'Error: {e}', file=sys.stderr)
                 sys.exit(1)
 
+    # Add blank line after random info so it scrolls up above the animation
+    if args.random:
+        print(file=sys.stderr)
+
     noise_gen = TerminalNoise(
         charset=charset,
         scale=args.scale,
