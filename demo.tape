@@ -1,8 +1,8 @@
 Output demo.gif
 
-Set FontSize 14
-Set Width 800
-Set Height 600
+Set FontSize 10
+Set Width 640
+Set Height 480
 
 Type "./terminal-noise.py"
 Enter
@@ -13,7 +13,7 @@ Type "clear"
 Enter
 
 Show
-Type "./terminal-noise.py --color-start '111111' --color-end '#FFFFFF' -s 0.03 --show-fps -c vertical"
+Type "./terminal-noise.py --color-start '#0088ff' --color-end '#84ff11' -s 0.04 -c mvertical"
 Enter
 Sleep 5s
 Ctrl+C
