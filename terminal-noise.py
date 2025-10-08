@@ -169,6 +169,7 @@ class TerminalNoise:
 
             frame_index = 0
             last_frame_time = time.time()
+            last_height = height
             while self.running:
                 loop_start = time.time()
 
@@ -206,11 +207,19 @@ class TerminalNoise:
                 if sleep_time > 0:
                     time.sleep(sleep_time)
 
+        except KeyboardInterrupt:
+            # User pressed Ctrl-C - handle gracefully
+            pass
         finally:
-            # Shut down executor without waiting for pending tasks
+            # Shut down executor immediately and cancel pending futures
             executor.shutdown(wait=False, cancel_futures=True)
-            # Show cursor and move to bottom
-            sys.stdout.write('\033[?25h')
+
+            # Move cursor to bottom of the rendered area and show it
+            # Calculate the row after the last rendered line
+            reserve = 2 if self.show_fps else 1
+            bottom_row = last_height + reserve
+            sys.stdout.write(f'\033[{bottom_row};1H')  # Move to bottom row, column 1
+            sys.stdout.write('\033[?25h')  # Show cursor
             sys.stdout.write('\n')
             sys.stdout.flush()
 
