@@ -20,18 +20,16 @@ from opensimplex import OpenSimplex
 # Character sets for rendering
 CHARSETS = {
     'simple': ' .:-=+*#%@',
-    'growth': ' .\'`,;:!|liI+~<>icv)(xr7t1{?[fjz}nsu*LJ#$%&0@',
-    'dense': ' .\':`^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
     'blocks': ' ░▒▓█',
-    'cblocks': '                                                                ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓████████████████████████████████████████████████████████████████',
     'box': ' ·│─┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬',
-    'box2': ' ·─│┼',
     'squares': ' ■▄▀▌▐█',
     'vertical': ' ▁▂▃▄▅▆▇█',
-    'cvertical': '        ▁▁▁▁▁▁▁▁▂▂▂▂▂▂▂▂▃▃▃▃▃▃▃▃▄▄▄▄▄▄▄▄▅▅▅▅▅▅▅▅▆▆▆▆▆▆▆▆▇▇▇▇▇▇▇▇████████',
+    'mvertical': '▁▂▃▄▅▆▇█▇▆▅▄▃▂▁',
+    'vvertical': '█▇▆▅▄▃▂▁▁▂▃▄▅▆▇█',
     'braille': ''.join(chr(i) for i in range(0x2800, 0x2900)),
-    'horizontal': '▏▎▍▌▋▊▉█',
-    'chorizontal': '        ▏▏▏▏▏▏▏▏▎▎▎▎▎▎▎▎▍▍▍▍▍▍▍▍▌▌▌▌▌▌▌▌▋▋▋▋▋▋▋▋▊▊▊▊▊▊▊▊▉▉▉▉▉▉▉▉████████',
+    'horizontal': ' ▏▎▍▌▋▊▉█',
+    'mhorizontal': '▏▎▍▌▋▊▉█▉▉▊▋▌▍▎▏',
+    'vhorizontal': '▉▉▊▋▌▍▎▏▏▎▍▌▋▊▉█',
 }
 
 # Worker function for multiprocessing (must be at module level)
@@ -76,20 +74,44 @@ class TerminalNoise:
         self.show_fps = show_fps
         self.frame_times = []  # Rolling window of recent frame times
 
-        # Pre-calculate colored characters for all charset indices
+        # Pre-calculate colored characters - expand to 256 total characters
+        # Each character in the charset gets repeated with different colors
+        # to create smooth gradients
+        TARGET_CHARS = 256
+        charset_len = len(self.charset)
+        chars_per_original = TARGET_CHARS // charset_len
+
+        self.colored_chars = []
+
         if color_start is not None and color_end is not None:
-            self.colored_chars = []
-            charset_len = len(self.charset)
-            for i in range(charset_len):
-                # Calculate normalized value for this character index
-                normalized = i / (charset_len - 1) if charset_len > 1 else 0
-                r = int(color_start[0] + (color_end[0] - color_start[0]) * normalized)
-                g = int(color_start[1] + (color_end[1] - color_start[1]) * normalized)
-                b = int(color_start[2] + (color_end[2] - color_start[2]) * normalized)
-                self.colored_chars.append(f'\033[38;2;{r};{g};{b}m{self.charset[i]}')
+            # Color mode: interpolate colors across repeated characters
+            for char_idx in range(charset_len):
+                char = self.charset[char_idx]
+                # Calculate how many times to repeat this character
+                # Last character gets any remainder to reach exactly 256
+                repeats = chars_per_original
+                if char_idx == charset_len - 1:
+                    repeats = TARGET_CHARS - len(self.colored_chars)
+
+                # Create colored versions of this character
+                for _ in range(repeats):
+                    # Calculate normalized value across the entire 256-character range
+                    overall_idx = len(self.colored_chars)
+                    normalized = overall_idx / (TARGET_CHARS - 1)
+                    r = int(color_start[0] + (color_end[0] - color_start[0]) * normalized)
+                    g = int(color_start[1] + (color_end[1] - color_start[1]) * normalized)
+                    b = int(color_start[2] + (color_end[2] - color_start[2]) * normalized)
+                    self.colored_chars.append(f'\033[38;2;{r};{g};{b}m{char}')
         else:
-            # Monochrome - just use the charset as-is
-            self.colored_chars = list(self.charset)
+            # Monochrome mode: still expand to 256 characters for consistency
+            for char_idx in range(charset_len):
+                char = self.charset[char_idx]
+                repeats = chars_per_original
+                if char_idx == charset_len - 1:
+                    repeats = TARGET_CHARS - len(self.colored_chars)
+
+                for _ in range(repeats):
+                    self.colored_chars.append(char)
 
         # Set up signal handler for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -206,7 +228,7 @@ def main():
         '-c', '--charset',
         choices=list(CHARSETS.keys()),
         default='horizontal',
-        help='Character set to use for rendering (default: horizontal)'
+        help='Character set to use for rendering (default: chorizontal)'
     )
     parser.add_argument(
         '-s', '--scale',
