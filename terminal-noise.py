@@ -10,6 +10,7 @@
 
 import argparse
 import os
+import random
 import signal
 import sys
 import time
@@ -220,6 +221,35 @@ def parse_hex_color(hex_str):
         raise ValueError(f'Invalid hex color: {hex_str}. Must be 6 hex digits.')
     return tuple(int(hex_str[i:i+2], 16) for i in (0, 2, 4))
 
+def generate_random_colors():
+    """Generate two random colors with guaranteed contrast.
+
+    First color is completely random. Second color has each RGB component
+    shifted by at least half (128) from the first color's value.
+    """
+    # Generate completely random first color
+    r1 = random.randint(0, 255)
+    g1 = random.randint(0, 255)
+    b1 = random.randint(0, 255)
+
+    # Generate second color with each component at least 128 away
+    def shift_component(val):
+        half = val // 2
+        # If original value is in upper half (128-255), shift down at least half
+        # If original value is in lower half (0-127), shift up at least half
+        if val >= 128:
+            # Shift down: new value should be <= (val - half)
+            return random.randint(0, val - half)
+        else:
+            # Shift up: new value should be >= (val + 128 - val) = 128
+            return random.randint(val + (128 - val), 255)
+
+    r2 = shift_component(r1)
+    g2 = shift_component(g1)
+    b2 = shift_component(b1)
+
+    return (r1, g1, b1), (r2, g2, b2)
+
 def main():
     parser = argparse.ArgumentParser(
         description='Generate animated ASCII art using OpenSimplex noise.'
@@ -264,22 +294,37 @@ def main():
         default=120,
         help='Target maximum FPS (default: 120)'
     )
+    parser.add_argument(
+        '--random',
+        action='store_true',
+        help='Use random charset and colors with guaranteed contrast'
+    )
 
     args = parser.parse_args()
+
+    # Handle random mode
+    charset = args.charset
+    if args.random:
+        charset = random.choice(list(CHARSETS.keys()))
+        print(f'Random charset: {charset}', file=sys.stderr)
 
     # Parse colors if not in monochrome mode
     color_start = None
     color_end = None
     if not args.no_color:
-        try:
-            color_start = parse_hex_color(args.color_start)
-            color_end = parse_hex_color(args.color_end)
-        except ValueError as e:
-            print(f'Error: {e}', file=sys.stderr)
-            sys.exit(1)
+        if args.random:
+            color_start, color_end = generate_random_colors()
+            print(f'Random colors: #{color_start[0]:02X}{color_start[1]:02X}{color_start[2]:02X} -> #{color_end[0]:02X}{color_end[1]:02X}{color_end[2]:02X}', file=sys.stderr)
+        else:
+            try:
+                color_start = parse_hex_color(args.color_start)
+                color_end = parse_hex_color(args.color_end)
+            except ValueError as e:
+                print(f'Error: {e}', file=sys.stderr)
+                sys.exit(1)
 
     noise_gen = TerminalNoise(
-        charset=args.charset,
+        charset=charset,
         scale=args.scale,
         color_start=color_start,
         color_end=color_end,

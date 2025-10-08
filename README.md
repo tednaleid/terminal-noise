@@ -55,6 +55,10 @@ Controls the detail level of the noise. Default is `0.1`.
 - `--color-end` - Ending color in hex format (default: `#11FFFF` - cyan)
 - `--no-color` - Disable colors for monochrome output
 
+### Randomization
+
+- `--random` - Use random charset and colors with guaranteed contrast (ignores `--charset`, `--color-start`, and `--color-end`)
+
 ### Performance Options
 
 - `--show-fps` - Display current FPS on the last line of output (rolling 30-frame average)
@@ -80,6 +84,11 @@ Smooth flowing animation:
 Detailed noise with braille characters:
 ```bash
 ./terminal-noise.py -c braille -s 0.05
+```
+
+Random charset and colors (guaranteed contrast):
+```bash
+./terminal-noise.py --random
 ```
 
 ### Color Gradient Examples
