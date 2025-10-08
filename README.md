@@ -31,14 +31,16 @@ The animation will fill your terminal window and run until you press Ctrl-C.
 ### Character Sets (`-c`, `--charset`)
 
 - `horizontal` - Horizontal bars (default): ` ▏▎▍▌▋▊▉█`
+- `mhorizontal` - Mirrored horizontal bars
+- `vhorizontal` - V-shaped horizontal bars
 - `vertical` - Vertical bars: ` ▁▂▃▄▅▆▇█`
+- `mvertical` - Mirrored vertical bars
+- `vvertical` - V-shaped vertical bars
 - `simple` - Basic gradient: ` .:-=+*#%@`
-- `growth` - Characters that grow from small to dense
-- `dense` - High-detail character set with many gradations
 - `blocks` - Block characters: ` ░▒▓█`
 - `squares` - Square characters: ` ■▄▀▌▐█`
 - `box` - Box drawing characters for geometric patterns
-- `box2` - Minimal box drawing: ` ·─│┼`
+- `braille` - Braille characters (256 patterns)
 
 ### Noise Scale (`-s`, `--scale`)
 
@@ -75,9 +77,9 @@ Smooth flowing animation:
 ./terminal-noise.py -s 0.2
 ```
 
-Detailed noise with growth characters:
+Detailed noise with braille characters:
 ```bash
-./terminal-noise.py -c growth -s 0.05
+./terminal-noise.py -c braille -s 0.05
 ```
 
 ### Color Gradient Examples
@@ -107,9 +109,9 @@ Neon theme (magenta to cyan):
 ./terminal-noise.py -c box --color-start '#FF00FF' --color-end '#00FFFF' -s 0.12
 ```
 
-Matrix theme (black to green with dense characters):
+Matrix theme (black to green with vertical characters):
 ```bash
-./terminal-noise.py -c dense --color-start '#000000' --color-end '#00FF00' -s 0.08
+./terminal-noise.py -c vvertical --color-start '#000000' --color-end '#00FF00' -s 0.08
 ```
 
 Show FPS while running:
@@ -163,6 +165,6 @@ Performance scales with:
 
 Tips:
 - Use `--show-fps` to monitor actual frame rate
-- Use `--max-fps` to cap frame rate (default: 60)
+- Use `--max-fps` to cap frame rate (default: 120)
 - Use `--no-color` for monochrome mode (slightly faster)
 - Larger `--scale` values (e.g., `0.2` or `0.3`) reduce calculations per frame
