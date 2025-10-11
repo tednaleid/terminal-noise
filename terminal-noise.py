@@ -33,6 +33,11 @@ CHARSETS = {
     'vhorizontal': '▉▉▊▋▌▍▎▏▏▎▍▌▋▊▉█',
 }
 
+# Worker initialization for multiprocessing (must be at module level)
+def _worker_init():
+    """Initialize worker process - ignore SIGINT so only parent handles it."""
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
 # Worker function for multiprocessing (must be at module level)
 def _render_frame_worker(args):
     """Render a complete frame in a worker process."""
@@ -161,7 +166,7 @@ class TerminalNoise:
         sys.stdout.write('\033[?25l')
         sys.stdout.flush()
 
-        executor = ProcessPoolExecutor(max_workers=cpu_count())
+        executor = ProcessPoolExecutor(max_workers=cpu_count(), initializer=_worker_init)
         try:
             # Pre-populate the pipeline with future frames
             futures = []
@@ -177,9 +182,13 @@ class TerminalNoise:
             while self.running:
                 loop_start = time.time()
 
-                # Get the next completed frame
-                frame = futures[0].result()
-                futures.pop(0)
+                # Get the next completed frame (with timeout to allow signal checking)
+                try:
+                    frame = futures[0].result(timeout=0.1)
+                    futures.pop(0)
+                except TimeoutError:
+                    # Timeout - loop back to check running flag
+                    continue
 
                 # Display the frame
                 sys.stdout.write('\033[H')
@@ -215,7 +224,11 @@ class TerminalNoise:
             # User pressed Ctrl-C - handle gracefully
             pass
         finally:
-            # Shut down executor immediately and cancel pending futures
+            # Cancel all pending futures
+            for future in futures:
+                future.cancel()
+
+            # Shut down executor immediately
             executor.shutdown(wait=False, cancel_futures=True)
 
             # Move cursor to bottom of the rendered area and show it
