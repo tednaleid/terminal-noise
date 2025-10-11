@@ -153,6 +153,10 @@ class TerminalNoise:
 
         width, height = self.get_terminal_size()
 
+        # Add blank lines so we're not overwriting previous terminal outpu
+        for i in range(height):
+            print(file=sys.stderr)
+
         # Hide cursor
         sys.stdout.write('\033[?25l')
         sys.stdout.flush()
@@ -331,10 +335,6 @@ def main():
             except ValueError as e:
                 print(f'Error: {e}', file=sys.stderr)
                 sys.exit(1)
-
-    # Add blank line after random info so it scrolls up above the animation
-    if args.random:
-        print(file=sys.stderr)
 
     noise_gen = TerminalNoise(
         charset=charset,
