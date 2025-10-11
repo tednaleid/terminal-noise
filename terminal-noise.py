@@ -319,7 +319,6 @@ def main():
     charset = args.charset
     if args.random:
         charset = random.choice(list(CHARSETS.keys()))
-        print(f'Random charset: {charset}', file=sys.stderr)
 
     # Parse colors if not in monochrome mode
     color_start = None
@@ -327,7 +326,6 @@ def main():
     if not args.no_color:
         if args.random:
             color_start, color_end = generate_random_colors()
-            print(f'Random colors: #{color_start[0]:02X}{color_start[1]:02X}{color_start[2]:02X} -> #{color_end[0]:02X}{color_end[1]:02X}{color_end[2]:02X}', file=sys.stderr)
         else:
             try:
                 color_start = parse_hex_color(args.color_start)
@@ -335,6 +333,23 @@ def main():
             except ValueError as e:
                 print(f'Error: {e}', file=sys.stderr)
                 sys.exit(1)
+
+    # Emit equivalent command when using --random
+    if args.random:
+        cmd_parts = ['./terminal-noise.py']
+        cmd_parts.append(f'-c {charset}')
+        if not args.no_color and color_start and color_end:
+            cmd_parts.append(f'--color-start \'#{color_start[0]:02X}{color_start[1]:02X}{color_start[2]:02X}\'')
+            cmd_parts.append(f'--color-end \'#{color_end[0]:02X}{color_end[1]:02X}{color_end[2]:02X}\'')
+        if args.no_color:
+            cmd_parts.append('--no-color')
+        if args.scale != 0.1:
+            cmd_parts.append(f'-s {args.scale}')
+        if args.show_fps:
+            cmd_parts.append('--show-fps')
+        if args.max_fps != 120:
+            cmd_parts.append(f'--max-fps {args.max_fps}')
+        print(' '.join(cmd_parts), file=sys.stderr)
 
     noise_gen = TerminalNoise(
         charset=charset,
