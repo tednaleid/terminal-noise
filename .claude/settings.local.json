@@ -5,7 +5,10 @@
       "Bash(timeout:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(./benchmark.py)"
+      "Bash(./benchmark.py)",
+      "Bash(chmod:*)",
+      "Bash(./test-sigint-run.sh:*)",
+      "Bash(./test-clean-exit.py)"
     ],
     "deny": [],
     "ask": []
